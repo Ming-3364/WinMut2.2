@@ -1,4 +1,5 @@
 **/*
+!test-about-maxBBSize/*.py
 !*.sh
 !.gitignore
 !run.sh

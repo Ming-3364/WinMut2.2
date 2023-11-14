@@ -33,7 +33,7 @@ static std::string get_print_line(const char *prefix) {
 }
 static void print_time_line(const char *prefix) {
   for (const auto *filename :
-       {"forked", "forked-simple", "timing", "timeout", "panic", "trace"}) {
+       {"forked", "forked-simple", "timing", "timeout", "panic", "trace", "proc_tree"}) {
     writeToLogFile(filename, get_print_line(prefix).c_str());
   }
 }
@@ -104,6 +104,7 @@ void initialize_only_timing(int argc, char **argv) {
   globalstart = std::chrono::steady_clock::now();
   atexit(exit_time_printer_only_timing);
 }
+
 void initialize_system(int argc, char **argv) {
 
 #ifdef __linux__

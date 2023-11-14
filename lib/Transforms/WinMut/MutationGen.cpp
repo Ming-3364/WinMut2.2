@@ -101,6 +101,7 @@ bool MutationGen::runOnFunction(Function &F) {
 #ifdef OUTPUT
   llvm::errs() << "\tGEN " << muts_num << " MUTS\n";
 #endif
+
   return false;
 }
 
