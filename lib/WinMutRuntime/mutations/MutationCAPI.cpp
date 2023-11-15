@@ -20,10 +20,15 @@ void reset_stdio();
 #include <mcheck.h>
 #endif
 
+#define DEMO_FORK_OUTPUT
 int __accmut__process_i32_arith(RegMutInfo *rmi, int from, int to, int left,
                                 int right) {
+#ifdef DEMO_FORK_OUTPUT
+  printf("__accmut__process_i32_arith\n");
+#endif
 
   auto mm = MutationManager::getInstance();
+
   return mm->process_i32_arith(rmi, from, to, left, right);
 }
 

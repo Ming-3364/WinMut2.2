@@ -228,9 +228,14 @@ void MutationManager::filter_mutants(const goodvar_mutant_specs_type &depSpec,
     forked_active_set = eq_class[classid].mut_id;
   }
 }
+#define DEMO_FORK_OUTPUT
 int64_t MutationManager::fork_eqclass(const char *moduleName,
                                       const goodvar_mutant_specs_type &depSpec,
                                       int offset) {
+#ifdef DEMO_FORK_OUTPUT
+  printf("fork_eqcalss\n");
+#endif
+
   if (eq_num == 0) {
     ALWAYS_LOG("eq_num is 0");
     exit(-1);
