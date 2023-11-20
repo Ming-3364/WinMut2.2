@@ -48,7 +48,7 @@ do
             subject_result_maxBBSize_algo_dir="${RESULT_DIR}/${subject}/$maxBBSize/$algo"
             mkdir $subject_result_maxBBSize_algo_dir
             # compile
-            # ./run.sh  $subject build  $algo $MAX_RUN_CASES $maxBBSize
+            ./run.sh  $subject build  $algo $MAX_RUN_CASES $maxBBSize
             
             # run
             # mailAfter ./run.sh  $subject run  $algo $MAX_RUN_CASES

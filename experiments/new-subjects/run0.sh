@@ -95,7 +95,7 @@ case ${ALGO} in
 		export CFLAGS="-accmut  ${CFLAGS}"
 		;;
 	AccMutNo)
-		export CFLAGS="-accmut -winmut-no-opt  ${CFLAGS}"
+		export CFLAGS="-O2 -accmut -winmut-no-opt  ${CFLAGS}"
 		;;
 	WinMut)
 		export CFLAGS="-winmut  ${CFLAGS}"

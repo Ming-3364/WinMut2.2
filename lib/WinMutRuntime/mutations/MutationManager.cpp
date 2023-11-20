@@ -319,7 +319,7 @@ int64_t MutationManager::fork_eqclass(const char *moduleName,
             sprintf(buf, "%d=>%d:%d:%d(%s-%d): %ld/r%d\n", MUTATION_ID, from,
                     to, eq_class[i].mut_id[0], moduleName,
                     eq_class[i].mut_id[0] - offset, usec, WEXITSTATUS(status));
-            sprintf(buf_without_usec, "%d=>%d:%d:%d(%s-%d) /r%d\n", 
+            sprintf(buf_without_usec, "%d=>%d:%d:%d(%s-%d): /r%d\n", 
                     MUTATION_ID, 
                     from, to, eq_class[i].mut_id[0], 
                     moduleName, eq_class[i].mut_id[0] - offset,
@@ -328,14 +328,14 @@ int64_t MutationManager::fork_eqclass(const char *moduleName,
             sprintf(buf, "%d=>%d:%d:%d(%s-%d): %ld/s%d\n", MUTATION_ID, from,
                     to, eq_class[i].mut_id[0], moduleName,
                     eq_class[i].mut_id[0] - offset, usec, WTERMSIG(status));
-            sprintf(buf_without_usec, "%d=>%d:%d:%d(%s-%d) /s%d\n", MUTATION_ID, from,
+            sprintf(buf_without_usec, "%d=>%d:%d:%d(%s-%d): /s%d\n", MUTATION_ID, from,
                     to, eq_class[i].mut_id[0], moduleName,
                     eq_class[i].mut_id[0] - offset, WTERMSIG(status));
           } else {
             sprintf(buf, "%d=>%d:%d:%d(%s-%d): %ld\n", MUTATION_ID, from, to,
                     eq_class[i].mut_id[0], moduleName,
                     eq_class[i].mut_id[0] - offset, usec);
-            sprintf(buf_without_usec, "%d=>%d:%d:%d(%s-%d)\n", MUTATION_ID, from, to,
+            sprintf(buf_without_usec, "%d=>%d:%d:%d(%s-%d):\n", MUTATION_ID, from, to,
                     eq_class[i].mut_id[0], moduleName,
                     eq_class[i].mut_id[0] - offset);
           }
