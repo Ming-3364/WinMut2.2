@@ -155,7 +155,11 @@ Mutation *MutUtil::getMutation(string line, int id) {
     // abv->oper_index;
     abv->oper_index = opindex;
     m = dyn_cast<Mutation>(abv);
-  } else {
+  }else if (mtype == "ORI") {
+    ORIMut *ori = new ORIMut();
+    m = dyn_cast<Mutation>(ori);
+  } 
+  else {
     errs() << "WRONG MUT TYPE !\n";
     exit(-1);
   }

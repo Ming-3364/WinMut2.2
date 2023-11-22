@@ -28,6 +28,8 @@ public:
 private:
   bool runOnFunction(Function &F);
 
+  static void genORI(Instruction *inst, StringRef fname, int index);
+
   static void genAOR(Instruction *inst, StringRef fname, int index);
 
   static void genLOR(Instruction *inst, StringRef fname, int index);

@@ -59,6 +59,8 @@ struct IDTuple {
 class WAInstrumenter : public ModulePass {
   bool useWindowAnalysis;
   bool optimizedInstrumentation;
+  bool handleMultiCondIF_SelectFrom;
+  bool handleMultiCondIF_BrFrom;
   std::vector<std::string> skipFunctionList{"main", "mlp_filter_channel_x86"};
   std::string name;
   FILE *statFile = nullptr;
@@ -202,13 +204,16 @@ private:
 
   static bool isSupportedOp(Instruction *I);
 
-  static bool isSupportedInstruction(Instruction *I);
+  bool isSupportedInstruction(Instruction *I);
 
   static bool isSupportedBoolInstruction(Instruction *I);
 
   static bool isSupportedType(Value *V);
 
   bool canFuseGoodVarInst(BasicBlock *BB);
+
+  // handleMultiCondIF_SelectFrom
+  bool isFinalCondInstruction(Instruction *I);
 };
 
 #endif // LLVM_WAINSTRUMENT_H

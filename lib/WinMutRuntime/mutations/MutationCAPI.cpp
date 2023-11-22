@@ -20,7 +20,17 @@ void reset_stdio();
 #include <mcheck.h>
 #endif
 
-#define DEMO_FORK_OUTPUT
+bool __accmut__process_i1_arith(RegMutInfo *rmi, int from, int to, bool left,
+                                bool right) {
+#ifdef DEMO_FORK_OUTPUT
+  printf("__accmut__process_i32_arith\n");
+#endif
+
+  auto mm = MutationManager::getInstance();
+
+  return mm->process_i1_arith(rmi, from, to, left, right);
+}
+
 int __accmut__process_i32_arith(RegMutInfo *rmi, int from, int to, int left,
                                 int right) {
 #ifdef DEMO_FORK_OUTPUT
@@ -139,6 +149,13 @@ void __accmut__GoodVar_TablePop() {
   mm->goodvar_table_pop();
 }
 
+bool __accmut__process_i1_arith_GoodVar(bool left, bool right,
+                                            GoodvarArg *arg) {
+
+  auto mm = MutationManager::getInstance();
+  return mm->process_i1_arith_goodvar(left, right, arg);
+}
+
 int32_t __accmut__process_i32_arith_GoodVar(int32_t left, int32_t right,
                                             GoodvarArg *arg) {
 
@@ -165,6 +182,13 @@ int32_t __accmut__process_i64_cmp_GoodVar(int64_t left, int64_t right,
 
   auto mm = MutationManager::getInstance();
   return mm->process_i64_cmp_goodvar(left, right, arg);
+}
+
+bool __accmut__process_i1_arith_GoodVar_init(bool left, bool right,
+                                                 GoodvarArg *arg) {
+
+  auto mm = MutationManager::getInstance();
+  return mm->process_i1_arith_goodvar_init(left, right, arg);
 }
 
 int32_t __accmut__process_i32_arith_GoodVar_init(int32_t left, int32_t right,

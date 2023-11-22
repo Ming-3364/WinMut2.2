@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <vector>
 
+#include <llvm/Transforms/WinMut/DebugMacro.h>
 // #define DEBUG_OUTPUT
 
 struct EqClass {
@@ -115,7 +116,7 @@ struct BlockRegMutBound {
   int right;
 };
 
-enum class CalcType { I32Arith, I64Arith, I32Bool, I64Bool };
+enum class CalcType { I1Arith, I32Arith, I64Arith, I32Bool, I64Bool};
 
 template <typename OpType, typename RetType, CalcType calcType> struct CalcFunc;
 
@@ -144,6 +145,7 @@ private:
   void divide_eqclass_goodvar(int from, int to, int64_t zeroval);
   template <class T, class UT>
   static T cal_T_arith(int32_t op, T a, T b, T undefValue);
+  static bool cal_i1_arith(int32_t op, bool a, bool b);
   static int32_t cal_i32_arith(int32_t op, int32_t a, int32_t b);
   static int64_t cal_i64_arith(int32_t op, int64_t a, int64_t b);
   template <class T, class UT> static T cal_T_bool(int32_t pred, T a, T b);
@@ -370,6 +372,7 @@ public:
   void register_muts(RegMutInfo *rmi, BlockRegMutBound **bound, int boundnum,
                      MutSpecs **specs, int specsnum, GoodvarArg **args,
                      int argsnum);
+  bool process_i1_arith(RegMutInfo *rmi, int from, int to, bool left, bool right);
   int process_i32_arith(RegMutInfo *rmi, int from, int to, int left, int right);
   int64_t process_i64_arith(RegMutInfo *rmi, int from, int to, int64_t left,
                             int64_t right);
@@ -390,12 +393,15 @@ public:
   void goodvar_table_push(size_t numOfGoodVar, size_t numOfMutants);
   void goodvar_table_push_max();
   void goodvar_table_pop();
+  inline bool process_i1_arith_goodvar(bool left, bool right, GoodvarArg *arg);
   inline int process_i32_arith_goodvar(int left, int right, GoodvarArg *arg);
   inline int64_t process_i64_arith_goodvar(int64_t left, int64_t right,
                                            GoodvarArg *arg);
   inline int32_t process_i32_cmp_goodvar(int left, int right, GoodvarArg *arg);
   inline int32_t process_i64_cmp_goodvar(int64_t left, int64_t right,
                                          GoodvarArg *arg);
+  inline int process_i1_arith_goodvar_init(bool left, bool right,
+                                            GoodvarArg *arg);
   inline int process_i32_arith_goodvar_init(int left, int right,
                                             GoodvarArg *arg);
   inline int64_t process_i64_arith_goodvar_init(int64_t left, int64_t right,
@@ -455,6 +461,12 @@ void MutationManager::filter_variant_goodvar(int from, int to) {
   }
 }
 
+template <> struct CalcFunc<bool, bool, CalcType::I1Arith> {
+  using FuncPointerType = bool (*)(int, bool, bool);
+  constexpr static FuncPointerType funcPointer =
+      &(MutationManager::cal_i1_arith);
+};
+
 template <> struct CalcFunc<int32_t, int32_t, CalcType::I32Arith> {
   using FuncPointerType = int32_t (*)(int, int32_t, int32_t);
   constexpr static FuncPointerType funcPointer =
@@ -478,6 +490,8 @@ template <> struct CalcFunc<int64_t, int32_t, CalcType::I64Bool> {
   constexpr static FuncPointerType funcPointer =
       &(MutationManager::cal_i64_bool);
 };
+
+
 
 template <class T, class UT>
 T MutationManager::cal_T_arith(int32_t op, T a, T b, T undefValue) {
@@ -673,6 +687,22 @@ RetType MutationManager::process_T_arith_goodvar(OpType left, OpType right,
                                                  GoodvarArg *arg) {
   typedef RetType CalcFuncType(int, OpType, OpType);
 
+#ifdef DEMO_GOODVAR_OUTPUT
+  printf("process_T_arith_goodvar\n");
+  printf("\tGoodvarArg: %d - %d\n", arg->good_from, arg->good_to);
+  switch (arg->status) {
+    case EXECUTE: {
+      printf("\tEXECUTE\n");
+    }
+    case BADVARLIKE: {
+      printf("\tBADVARLIKE\n");
+    }
+    default: {
+      printf("\tdefault\n");
+    }
+  }
+#endif
+
   CalcFuncType *f = CalcFunc<OpType, RetType, calcType>::funcPointer;
 
   if (unlikely(system_disabled() || !system_initialized()))
@@ -798,6 +828,11 @@ RetType MutationManager::process_T_arith_goodvar(OpType left, OpType right,
     }
 
     if (ret_id == 0) {
+
+#ifdef DEMO_GOODVAR_OUTPUT
+  printf("\tori(%d): GoodVar fork\n", MUTATION_ID);
+#endif
+
       if (recent_set.empty()) {
         arg->status = SKIP;
         return f(op, left, right);
@@ -867,6 +902,10 @@ RetType MutationManager::process_T_arith_goodvar(OpType left, OpType right,
       }
       return ret;
     } else {
+
+#ifdef DEMO_GOODVAR_OUTPUT
+  printf("\tori(%d): GoodVar cache\n", MUTATION_ID);
+#endif
 
 #ifdef CLOCK
       if (MUTATION_ID != 0) {
@@ -1193,6 +1232,12 @@ void MutationManager::process_T_calc_goodvar_for_badvar_and_forked(
   }
 }
 
+bool MutationManager::process_i1_arith_goodvar(bool left, bool right,
+                                               GoodvarArg *arg) {
+  return process_T_arith_goodvar<bool, bool, false, CalcType::I1Arith>(
+      left, right, arg);
+}
+
 int MutationManager::process_i32_arith_goodvar(int left, int right,
                                                GoodvarArg *arg) {
   return process_T_arith_goodvar<int32_t, int32_t, false, CalcType::I32Arith>(
@@ -1214,6 +1259,12 @@ int32_t MutationManager::process_i32_cmp_goodvar(int left, int right,
 int32_t MutationManager::process_i64_cmp_goodvar(int64_t left, int64_t right,
                                                  GoodvarArg *arg) {
   return process_T_arith_goodvar<int64_t, int32_t, false, CalcType::I64Bool>(
+      left, right, arg);
+}
+
+int MutationManager::process_i1_arith_goodvar_init(bool left, bool right,
+                                                    GoodvarArg *arg) {
+  return process_T_arith_goodvar<bool, bool, true, CalcType::I1Arith>(
       left, right, arg);
 }
 

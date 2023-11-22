@@ -228,7 +228,7 @@ void MutationManager::filter_mutants(const goodvar_mutant_specs_type &depSpec,
     forked_active_set = eq_class[classid].mut_id;
   }
 }
-#define DEMO_FORK_OUTPUT
+
 int64_t MutationManager::fork_eqclass(const char *moduleName,
                                       const goodvar_mutant_specs_type &depSpec,
                                       int offset) {
@@ -362,6 +362,21 @@ int64_t MutationManager::fork_eqclass(const char *moduleName,
   filter_mutants(depSpec, 0);
   return result;
 }
+
+bool MutationManager::cal_i1_arith(int32_t op, bool a, bool b) {
+  switch (op) {
+    case Instruction::And:
+      return a && b;
+    case Instruction::Or:
+      return a || b;
+    default:
+      LOG("OpCode: %d\n", op);
+      if (MUTATION_ID == 0) {
+        raise(SIGSTOP);
+      }
+      exit(MUT_TP_ERR);
+  }
+}
 int32_t MutationManager::cal_i32_arith(int32_t op, int32_t a, int32_t b) {
   return cal_T_arith<int32_t, uint32_t>(op, a, b, INT32_MAX);
 }
@@ -417,6 +432,13 @@ void MutationManager::register_muts(RegMutInfo *rmi, BlockRegMutBound **bound,
       }
     }
   }
+}
+
+bool MutationManager::process_i1_arith(RegMutInfo *rmi, int from, int to,
+                                       bool left, bool right) {
+  return process_T_arith(rmi, from, to, left, right,
+                         all_mutation[to + rmi->offset].sop,
+                         &(MutationManager::cal_i1_arith));
 }
 
 int MutationManager::process_i32_arith(RegMutInfo *rmi, int from, int to,

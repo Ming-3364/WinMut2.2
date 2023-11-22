@@ -23,7 +23,8 @@ public:
     MK_LVR,
     MK_UOI,
     MK_ROV,
-    MK_ABV
+    MK_ABV,
+    MK_ORI
   };
 
 public:
@@ -157,6 +158,14 @@ public:
   ABVMut() : Mutation(MK_ABV) {}
 
   static bool classof(const Mutation *M) { return M->getKind() == MK_ABV; }
+};
+
+class ORIMut : public Mutation {
+public:
+
+  ORIMut() : Mutation(MK_ORI) {}
+
+  static bool classof(const Mutation *M) { return M->getKind() == MK_ORI; }
 };
 
 #endif

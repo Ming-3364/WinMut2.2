@@ -189,6 +189,11 @@ void MutationGen::genMutationFile(Function &F) {
         // TODO: add for i1, i8. Support i32 and i64 first
         if (!(BI->getType()->isIntegerTy(32) ||
               BI->getType()->isIntegerTy(64))) {
+          // 添加对And Or的 i1 支持来实现对其的GoodVar支持
+          if (BI->getType()->isIntegerTy(1)
+              && (opc == Instruction::And || opc == Instruction::Or)){
+            // genORI(&*BI, F.getName(), idxtmp);
+          }
           continue;
         }
         genLVR(&*BI, F.getName(), idxtmp);
@@ -273,6 +278,15 @@ void MutationGen::genAOR(Instruction *inst, StringRef fname, int index) {
     ofresult.flush();
     muts_num++;
   }
+}
+
+void MutationGen::genORI(Instruction *inst, StringRef fname, int index) {
+  std::stringstream ss;
+  ss << "ORI:" << std::string(fname) << ":" << index << ":"
+      << inst->getOpcode() << ":"  << '\n';
+  ofresult << ss.str();
+  ofresult.flush();
+  muts_num++;
 }
 
 void MutationGen::genROR(Instruction *inst, StringRef fname, int index) {

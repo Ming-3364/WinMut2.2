@@ -5,6 +5,9 @@
 #include "MutationStorage.h"
 #include <cstdint>
 extern "C" {
+bool __accmut__process_i1_arith(RegMutInfo *rmi, int from, int to, bool left,
+                                bool right);
+
 int __accmut__process_i32_arith(RegMutInfo *rmi, int from, int to, int left,
                                 int right);
 
@@ -44,6 +47,9 @@ void __accmut__GoodVar_TablePush_max();
 
 void __accmut__GoodVar_TablePop();
 
+bool __accmut__process_i1_arith_GoodVar(bool left, bool right,
+                                            GoodvarArg *arg);
+
 int32_t __accmut__process_i32_arith_GoodVar(int32_t left, int32_t right,
                                             GoodvarArg *arg);
 
@@ -55,6 +61,9 @@ int32_t __accmut__process_i32_cmp_GoodVar(int32_t left, int32_t right,
 
 int32_t __accmut__process_i64_cmp_GoodVar(int64_t left, int64_t right,
                                           GoodvarArg *arg);
+
+bool __accmut__process_i1_arith_GoodVar_init(bool left, bool right,
+                                                 GoodvarArg *arg);
 
 int32_t __accmut__process_i32_arith_GoodVar_init(int32_t left, int32_t right,
                                                  GoodvarArg *arg);

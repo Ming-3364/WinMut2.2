@@ -17,9 +17,15 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <llvm/Transforms/WinMut/DebugMacro.h>
+
 using namespace llvm;
 
-WAInstrumenter::WAInstrumenter(bool useWindowAnalysis, bool optimizedInstrumentation) : ModulePass(ID), useWindowAnalysis(useWindowAnalysis), optimizedInstrumentation(optimizedInstrumentation) {}
+WAInstrumenter::WAInstrumenter(bool useWindowAnalysis, bool optimizedInstrumentation) 
+  : ModulePass(ID), useWindowAnalysis(useWindowAnalysis), optimizedInstrumentation(optimizedInstrumentation)
+  {
+    // this->handleMultiCondIF_SelectFrom = true;
+  }
 
 void WAInstrumenter::initialTypes() {
   auto i1 = IntegerType::get(TheModule->getContext(), 1);
@@ -109,7 +115,7 @@ void WAInstrumenter::initialTypes() {
                                    PointerType::get(goodvarargTy, 0)};
     return FunctionType::get(retType, paramTypes, false);
   };
-
+  typeMapping["goodvari1i1FuncTy"] = getGoodvarBinaryFuncTy(i8, i8);
   typeMapping["goodvari32i32FuncTy"] = getGoodvarBinaryFuncTy(i32, i32);
   typeMapping["goodvari64i64FuncTy"] = getGoodvarBinaryFuncTy(i64, i64);
   typeMapping["goodvari64i32FuncTy"] = getGoodvarBinaryFuncTy(i32, i64);
@@ -121,6 +127,7 @@ void WAInstrumenter::initialTypes() {
     return FunctionType::get(retType, paramTypes, false);
   };
 
+  typeMapping["normali1i1FuncTy"] = getNormalBinaryFuncTy(i8, i8);
   typeMapping["normali32i32FuncTy"] = getNormalBinaryFuncTy(i32, i32);
   typeMapping["normali64i64FuncTy"] = getNormalBinaryFuncTy(i64, i64);
   typeMapping["normali64i32FuncTy"] = getNormalBinaryFuncTy(i32, i64);
@@ -148,12 +155,16 @@ void WAInstrumenter::initialFuncs() {
       dyn_cast<FunctionType>(typeMapping["returnvoidFuncTy"]);
   auto returni32FuncTy = dyn_cast<FunctionType>(typeMapping["returni32FuncTy"]);
   auto returni64FuncTy = dyn_cast<FunctionType>(typeMapping["returni64FuncTy"]);
+  auto goodvari1i1FuncTy =
+      dyn_cast<FunctionType>(typeMapping["goodvari1i1FuncTy"]);
   auto goodvari32i32FuncTy =
       dyn_cast<FunctionType>(typeMapping["goodvari32i32FuncTy"]);
   auto goodvari64i64FuncTy =
       dyn_cast<FunctionType>(typeMapping["goodvari64i64FuncTy"]);
   auto goodvari64i32FuncTy =
       dyn_cast<FunctionType>(typeMapping["goodvari64i32FuncTy"]);
+  auto normali1i1FuncTy =
+      dyn_cast<FunctionType>(typeMapping["normali1i1FuncTy"]);
   auto normali32i32FuncTy =
       dyn_cast<FunctionType>(typeMapping["normali32i32FuncTy"]);
   auto normali64i64FuncTy =
@@ -175,6 +186,7 @@ void WAInstrumenter::initialFuncs() {
       {"__accmut__stdcall_i64", returni64FuncTy},
       {"__accmut__stdcall_void", returnvoidFuncTy},
       {"__accmut__std_store", returnvoidFuncTy},
+      {"__accmut__process_i1_arith", normali1i1FuncTy},
       {"__accmut__process_i32_arith", normali32i32FuncTy},
       {"__accmut__process_i64_arith", normali64i64FuncTy},
       {"__accmut__process_i32_cmp", normali32i32FuncTy},
@@ -185,6 +197,7 @@ void WAInstrumenter::initialFuncs() {
       {"__accmut__GoodVar_TablePush", tablePushFuncTy},
       {"__accmut__GoodVar_TablePop", returnvoidFuncTy},
       {"__accmut__GoodVar_TablePush_max", returnvoidFuncTy},
+      {"__accmut__process_i1_arith_GoodVar", goodvari1i1FuncTy},
       {"__accmut__process_i32_arith_GoodVar", goodvari32i32FuncTy},
       {"__accmut__process_i32_arith_GoodVar_init", goodvari32i32FuncTy},
       {"__accmut__process_i64_arith_GoodVar", goodvari64i64FuncTy},
@@ -1138,6 +1151,11 @@ bool WAInstrumenter::runOnFunction(Function &F) {
          << "()  ########\n\n";
 #endif
 
+#ifdef DEMO_GOODVAR_OUTPUT
+          llvm::errs() << "\n######## WA INSTRUMTNTING MUT @ " << F.getName()
+                       << "()  ########\n\n";
+#endif
+
   getInstMutsMap(v, F);
 
   if (optimizedInstrumentation) {
@@ -1271,16 +1289,45 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
   for (auto &I : *BB) {
     if (instMutsMap.count(&I) == 1) {
       if (goodVariables.count(&I) == 1 || hasUsedPreviousGoodVariables(&I)) {
+
+        // auto mutsit = instMutsMap.find(&I);
+        // if (mutsit == instMutsMap.end()){
+        //   mutSpecList.emplace_back(0, 0);
+        //   auto &muts = instMutsMap[&I];
+        // }
+        // else{
+        //   auto &muts = instMutsMap[&I];
+        // }
+
         auto &muts = instMutsMap[&I];
         mutSpecList.emplace_back(muts.front()->id, muts.back()->id);
+
+        // if (muts.size() == 0){
+        //   mutSpecList.emplace_back(0, 0);
+        //   instMutsMap.erase(&I);
+        // }
+        // else {
+        //   mutSpecList.emplace_back(muts.front()->id, muts.back()->id);
+        // }
+        
+
+        
         int left_id = getGoodVarId(I.getOperand(0));
         int right_id = getGoodVarId(I.getOperand(1));
         int ret_id = getGoodVarId(&I);
         mutIDList.emplace_back(left_id, right_id, ret_id);
-        if (ret_id == 0)
+        if (ret_id == 0) {
           ++numOfGoodVarForking;
-        else
+#ifdef DEMO_GOODVAR_OUTPUT
+          llvm::errs() << "GoodVar fork: " << I << "\n";
+#endif
+        }
+        else{
           ++numOfGoodVarCaching;
+#ifdef DEMO_GOODVAR_OUTPUT
+          llvm::errs() << "GoodVar cache: " << I << "\n";
+#endif
+        }
         if (!muts.empty()) {
           if (good_from == -1) {
             good_from = muts.front()->id;
@@ -1298,6 +1345,9 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
           first_goodvar_inst = &I;
       } else {
         ++numOfBadVar;
+#ifdef DEMO_GOODVAR_OUTPUT
+          llvm::errs() << "BadVar: " << I << "\n";
+#endif
       }
     }
   }
@@ -1307,10 +1357,14 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
             numOfBadVar);
   }
 
+#ifdef DEMO_GOODVAR_OUTPUT
+  printf( "%d:%d:%d\n", numOfGoodVarCaching, numOfGoodVarForking,
+            numOfBadVar);
+#endif
+
   if (!mutSpecList.empty()) {
     buildMutSpecsGV(mutSpecList);
     buildMutDepSpecsGV(mutSpecList, mutIDList);
-
     std::vector<GlobalVariable *> gvs;
     for (auto &I : *BB) {
       if (goodVariables.count(&I) == 1 || hasUsedPreviousGoodVariables(&I)) {
@@ -1395,7 +1449,6 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
     // avoid iterator invalidation
     Instruction &I = *it;
     ++it;
-
     auto cur_it = &I;
     if (instMutsMap.count(cur_it) == 1) {
       vector<Mutation *> &tmp = instMutsMap[cur_it];
@@ -1904,9 +1957,21 @@ void WAInstrumenter::instrumentArithInst(Instruction *cur_it, int mut_from,
     } else {
       f_process = funcMapping["__accmut__process_i64_arith"];
     }
-  } else {
+  } 
+  else if (ori_ty->isIntegerTy(1)) {
+    if (aboutGoodVariable) {
+      if (is_first) {
+        f_process = funcMapping["__accmut__process_i1_arith_GoodVar_init"];
+      } else {
+        f_process = funcMapping["__accmut__process_i1_arith_GoodVar"];
+      }
+    } else {
+      f_process = funcMapping["__accmut__process_i1_arith"];
+    }
+  }else {
     ERRMSG("ArithInst TYPE ERROR ");
     // cur_it->dump();
+    llvm::errs() << "ArithInst TYPE ERROR " << "\n";
     llvm::errs() << *ori_ty << "\n";
     llvm::errs() << *cur_it << "\n";
     llvm::errs() << *(cur_it->getParent()) << "\n";
@@ -2127,10 +2192,27 @@ void WAInstrumenter::getGoodVariables(BasicBlock &BB) {
   int goodVariableCount = 0;
 
   for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
+    // if (this->handleMultiCondIF_SelectFrom){
+      
+    //   if (I->getOpcode() == Instruction::Select) {
+    //     llvm::errs() << *I << "\n";
+    //     Instruction *finalCondDefInst = dyn_cast<Instruction>(I->getOperand(0));
+    //     llvm::errs() << *finalCondDefInst << "\n";
+        
+    //   }
+    // }
+    
+
     if (!isSupportedInstruction(&*I) || I->isUsedOutsideOfBlock(&BB)) {
+#ifdef DEMO_MULTI_COND_IF_SELECT_FROM_OUTPUT
+          llvm::errs() << "handleMultiCondIF_SelectFrom: not support" << *I << "\n";
+          llvm::errs() << *I->getType() << " " << I->getOpcode() << " " << I->getOperand(0)->getType() << " " << I->getOperand(1)->getType() << "\n";
+#endif
       continue;
     }
-
+#ifdef DEMO_MULTI_COND_IF_SELECT_FROM_OUTPUT
+          llvm::errs() << "handleMultiCondIF_SelectFrom: support" << *I << "\n";
+#endif
     bool checkUser = true;
 
     for (User *U : I->users()) {
@@ -2139,6 +2221,9 @@ void WAInstrumenter::getGoodVariables(BasicBlock &BB) {
             !isSupportedBoolInstruction(userInst) &&
             !isSupportedInstruction(userInst)) {
           checkUser = false;
+#ifdef DEMO_MULTI_COND_IF_SELECT_FROM_OUTPUT
+          llvm::errs() << "handleMultiCondIF_SelectFrom: check user false" << *userInst << "\n";
+#endif
           break;
         }
       } else {
@@ -2322,7 +2407,33 @@ bool WAInstrumenter::isSupportedOp(Instruction *I) {
   return isSupportedOpcode(I) && isSupportedType(I->getOperand(1));
 }
 
+bool WAInstrumenter::isFinalCondInstruction(Instruction *I) {
+  return I->getType()->isIntegerTy(1);
+}
+
 bool WAInstrumenter::isSupportedInstruction(Instruction *I) {
+  if (this->handleMultiCondIF_SelectFrom){
+    switch (I->getOpcode()){
+      case Instruction::And:
+      case Instruction::Or:
+        if (I->getType()->isIntegerTy(1)
+            && I->getOperand(0)->getType()->isIntegerTy(1)
+            && I->getOperand(1)->getType()->isIntegerTy(1)){
+#ifdef DEMO_MULTI_COND_IF_SELECT_FROM_OUTPUT
+          llvm::errs() << "handleMultiCondIF_SelectFrom: isSupportedInstruction" << *I << "\n";
+#endif
+          return true;
+        }
+        break;
+
+      case Instruction::ICmp:
+        return true;
+        break;
+
+      default:
+        break;
+    }
+  }
   return isSupportedType(I) && isSupportedOp(I);
 }
 
