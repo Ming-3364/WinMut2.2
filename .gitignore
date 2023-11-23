@@ -77,3 +77,4 @@ bindings/go/llvm/workdir
 
 .idea/
 cmake-build-*/
+build-ninja-*/

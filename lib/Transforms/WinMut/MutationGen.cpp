@@ -144,7 +144,7 @@ void MutationGen::genMutationFile(Function &F) {
         idxtmp = 0 - idxtmp;
       }
 #endif
-
+      // llvm::errs() << *BI << '\n';
       switch (opc) {
       case Instruction::Add:
       case Instruction::Sub:
@@ -192,7 +192,8 @@ void MutationGen::genMutationFile(Function &F) {
           // 添加对And Or的 i1 支持来实现对其的GoodVar支持
           if (BI->getType()->isIntegerTy(1)
               && (opc == Instruction::And || opc == Instruction::Or)){
-            // genORI(&*BI, F.getName(), idxtmp);
+                // llvm::errs() << "ORI:" << *BI <<"\n";
+            genORI(&*BI, F.getName(), idxtmp);
           }
           continue;
         }

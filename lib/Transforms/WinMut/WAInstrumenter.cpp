@@ -24,7 +24,7 @@ using namespace llvm;
 WAInstrumenter::WAInstrumenter(bool useWindowAnalysis, bool optimizedInstrumentation) 
   : ModulePass(ID), useWindowAnalysis(useWindowAnalysis), optimizedInstrumentation(optimizedInstrumentation)
   {
-    // this->handleMultiCondIF_SelectFrom = true;
+    this->handleMultiCondIF_SelectFrom = true;
   }
 
 void WAInstrumenter::initialTypes() {
@@ -198,6 +198,7 @@ void WAInstrumenter::initialFuncs() {
       {"__accmut__GoodVar_TablePop", returnvoidFuncTy},
       {"__accmut__GoodVar_TablePush_max", returnvoidFuncTy},
       {"__accmut__process_i1_arith_GoodVar", goodvari1i1FuncTy},
+      {"__accmut__process_i1_arith_GoodVar_init", goodvari1i1FuncTy},
       {"__accmut__process_i32_arith_GoodVar", goodvari32i32FuncTy},
       {"__accmut__process_i32_arith_GoodVar_init", goodvari32i32FuncTy},
       {"__accmut__process_i64_arith_GoodVar", goodvari64i64FuncTy},
@@ -1156,6 +1157,10 @@ bool WAInstrumenter::runOnFunction(Function &F) {
                        << "()  ########\n\n";
 #endif
 
+#ifdef DEMO_FLOW_OUTPUT
+  llvm::errs() << "WAInstrumenter::runOnFunction @ " << F.getName() << "\n"; 
+#endif
+
   getInstMutsMap(v, F);
 
   if (optimizedInstrumentation) {
@@ -1167,7 +1172,7 @@ bool WAInstrumenter::runOnFunction(Function &F) {
       // avoid iterator invalidation
       BasicBlock *BB = *it;
       ++it;
-
+    
       if (useWindowAnalysis) {
         getGoodVariables(*BB);
         filterRealGoodVariables();
@@ -1205,6 +1210,10 @@ bool WAInstrumenter::runOnFunction(Function &F) {
     for (auto it = F.begin(), end = F.end(); it != end;) {
       auto &BB = *it;
       ++it;
+#ifdef DEMO_FLOW_OUTPUT
+      llvm::errs() << "\t" << "BB: \n" << BB << "\n"; 
+      printf("BB: it != end : %d\n" ,it!= end);
+#endif
       if (useWindowAnalysis) {
         getGoodVariables(BB);
         filterRealGoodVariables();
@@ -1222,7 +1231,7 @@ bool WAInstrumenter::runOnFunction(Function &F) {
       instrumentMulti(&BB, mapping, -1, -1);
     }
   }
-
+  printf("13\n");
   return true;
 }
 
@@ -1273,6 +1282,10 @@ void WAInstrumenter::generateSetMaxCtor() {
 bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
                                      std::vector<ValueToValueMapTy> &mappings,
                                      int good_idx, int bad_idx) {
+#ifdef DEMO_FLOW_OUTPUT
+  llvm::errs() << "WAInstrumenter::instrumentMulti " << "\n"; 
+#endif
+
   bool aboutGoodVariables = false;
   int good_from = -1, good_to = -1;
   Instruction *first_goodvar_inst = nullptr;
@@ -1367,6 +1380,7 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
     buildMutDepSpecsGV(mutSpecList, mutIDList);
     std::vector<GlobalVariable *> gvs;
     for (auto &I : *BB) {
+      printf("00\n");
       if (goodVariables.count(&I) == 1 || hasUsedPreviousGoodVariables(&I)) {
         if (instMutsMap.count(&I) == 1) {
           auto &muts = instMutsMap[&I];
@@ -1387,6 +1401,7 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
     ArrayType *ty = ArrayType::get(eleTy, gvs.size());
     std::vector<Constant *> initvec;
     for (auto *p : gvs) {
+      printf("01\n");
       initvec.push_back(p);
     }
     Constant *initarr = ConstantArray::get(ty, initvec);
@@ -1400,6 +1415,7 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
             std::to_string(good_to));
 
     for (auto &I : *BB) {
+      printf("02\n");
       if (goodVariables.count(&I) == 1 || hasUsedPreviousGoodVariables(&I)) {
         if (instMutsMap.count(&I) == 1) {
           auto &muts = instMutsMap[&I];
@@ -1442,6 +1458,8 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
     }
   }
 
+  printf("1\n");
+  llvm::errs() << *BB << "\n";
   for (auto it = BB->rbegin(), end = BB->rend(); it != end;) {
     // errs() << it.getNodePtr() << "---" << it->getPrevNode() << "\n";
     // errs() << "\n---F---" << *BB.getParent() << "---F---\n";
@@ -1449,8 +1467,14 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
     // avoid iterator invalidation
     Instruction &I = *it;
     ++it;
+    llvm::errs() << "I: " << I << "\n";
+    if (it!= end)
+      llvm::errs() << "it: " << *it << "\n";
+    printf("it != end : %d\n" ,it!= end);
     auto cur_it = &I;
+    printf("2\n");
     if (instMutsMap.count(cur_it) == 1) {
+      printf("3\n");
       vector<Mutation *> &tmp = instMutsMap[cur_it];
       int mut_from, mut_to;
 
@@ -1465,6 +1489,7 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
       }
 
       if (goodVariables.count(&I) == 1 || hasUsedPreviousGoodVariables(&I)) {
+        printf("4\n");
         int left_id = getGoodVarId(I.getOperand(0));
         int right_id = getGoodVarId(I.getOperand(1));
         int ret_id = getGoodVarId(&I);
@@ -1487,6 +1512,7 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
                                     ret_id);
         aboutGoodVariables = true;
       } else {
+        printf("5\n");
         if (bad_idx != -1) {
           /*
           llvm::errs() << "FROM" << I << "\n";
@@ -1504,11 +1530,16 @@ bool WAInstrumenter::instrumentMulti(BasicBlock *BB,
       instMutsMap.erase(&I);
 
     } else {
+      printf("6\n");
       if (goodVariables.count(&I) == 1 || hasUsedPreviousGoodVariables(&I)) {
+        printf("10");
+        exit(-1);
         assert(false);
       }
     }
+    printf("11\n");
   }
+  printf("12\n");
   return aboutGoodVariables;
 }
 
@@ -1517,11 +1548,19 @@ void WAInstrumenter::instrumentAboutGoodVariable(Instruction &I, int mut_from,
                                                  int good_to, bool is_first,
                                                  int left_id, int right_id,
                                                  int ret_id) {
+
+#ifdef DEMO_FLOW_OUTPUT
+  llvm::errs() << "\t" << "WAInstrumenter::instrumentAboutGoodVariable " << I << "\n"; 
+#endif
   instrumentInst(I, true, mut_from, mut_to, good_from, good_to, is_first,
                  left_id, right_id, ret_id);
 }
 
 void WAInstrumenter::instrumentAsDMA(Instruction &I, int mut_from, int mut_to) {
+
+#ifdef DEMO_FLOW_OUTPUT
+  llvm::errs() << "\t" << "WAInstrumenter::instrumentAsDMA " << I << "\n"; 
+#endif
   instrumentInst(I, false, mut_from, mut_to, 0, 0, false, 0, 0, 0);
 }
 
@@ -1979,7 +2018,9 @@ void WAInstrumenter::instrumentArithInst(Instruction *cur_it, int mut_from,
     assert(false);
     exit(-1);
   }
-
+  printf("???\n");
+  llvm::errs() << *cur_it << "\n";
+  llvm::errs() << *ori_ty << "\n";
   std::vector<Value *> int_call_params;
   if (!aboutGoodVariable) {
     int_call_params.push_back(rmigv);
@@ -2018,6 +2059,9 @@ void WAInstrumenter::instrumentArithInst(Instruction *cur_it, int mut_from,
     irBuilder.CreateCondBr(runorig, original, goodvar);
 
     irBuilder.SetInsertPoint(goodvar);
+    llvm::errs() << f_process->getName() << "\n";
+    for (auto param : int_call_params)
+      llvm::errs() << param->getName() << param->getType() << "\n";
     auto *call = irBuilder.CreateCall(f_process, int_call_params);
     irBuilder.CreateBr(end);
 
@@ -2187,6 +2231,10 @@ void WAInstrumenter::getInstMutsMap(vector<Mutation *> *v, Function &F) {
 }
 
 void WAInstrumenter::getGoodVariables(BasicBlock &BB) {
+
+#ifdef DEMO_FLOW_OUTPUT
+  llvm::errs() << "WAInstrumenter::getGoodVariables " << "\n"; 
+#endif
   goodVariables.clear();
 
   int goodVariableCount = 0;
@@ -2277,6 +2325,10 @@ void WAInstrumenter::getGoodVariables(BasicBlock &BB) {
 }
 
 void WAInstrumenter::filterRealGoodVariables() {
+#ifdef DEMO_FLOW_OUTPUT
+  llvm::errs() << "WAInstrumenter::filterRealGoodVariables " << "\n"; 
+#endif
+
   std::vector<int> erased;
   for (auto it = goodVariables.begin(), end = goodVariables.end(); it != end;) {
     // avoid iterator invalidation
@@ -2451,13 +2503,16 @@ bool WAInstrumenter::isSupportedType(Value *V) {
 
 bool WAInstrumenter::hasUsedPreviousGoodVariables(Instruction *I) {
   for (Use &U : I->operands()) {
+    printf("7\n");
     if (Instruction *usedInst = dyn_cast<Instruction>(U.get())) {
       if (goodVariables.count(usedInst) == 1) {
         // errs() << *usedInst << "\n";
+        printf("8\n");
         return true;
       }
     }
   }
+  printf("9\n");
   return false;
 }
 
