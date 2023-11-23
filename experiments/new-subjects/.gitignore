@@ -1,5 +1,6 @@
 **/*
 !test-about-maxBBSize/*.py
+!test-about-maxBBSize/*.sh
 !*.sh
 !.gitignore
 !run.sh
@@ -7,3 +8,11 @@
 !config/*
 !patch/
 !patch/*
+
+!demo/
+!demo/*.sh
+!demo/origin/
+!demo/origin/**
+
+!original/
+!original/*

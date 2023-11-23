@@ -1,0 +1,57 @@
+# Makefile
+# 源文件目录
+SRC_DIR = src
+
+# 生成文件目录
+BIN_DIR = bin
+
+# 目标可执行文件
+TARGET = $(BIN_DIR)/mutrepeat, $(BIN_DIR)/mem2reg
+
+# 源文件列表
+SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
+
+# 对象文件列表
+OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(BIN_DIR)/%.o, $(SRC_FILES))
+
+# 默认构建目标
+all: $(TARGET)
+
+# TEST
+test:
+	echo -e "1 2\n3 4" | ./$(BIN_DIR)/mutrepeat
+	echo -e "1 2\n3 4" | ./$(BIN_DIR)/mutrepeat
+	echo -e "1 2\n3 4" | ./$(BIN_DIR)/mutrepeat
+	echo -e "1 2\n3 4" | ./$(BIN_DIR)/mutrepeat
+
+	echo -e "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	echo -e "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	echo -e "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	echo -e "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+
+	echo  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	echo  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	echo  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	echo  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+
+	printf  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	printf  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	printf  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+	printf  "1 2 3 4" | ./$(BIN_DIR)/mutrepeat
+
+	printf  "1 2 3 5" | tr '5' '4' | ./$(BIN_DIR)/mutrepeat
+	printf  "1 2 3 5" | tr '5' '4' | ./$(BIN_DIR)/mutrepeat
+	printf  "1 2 3 5" | tr '5' '4' | ./$(BIN_DIR)/mutrepeat
+	printf  "1 2 3 5" | tr '5' '4' | ./$(BIN_DIR)/mutrepeat
+
+# 生成可执行文件
+$(TARGET): $(OBJ_FILES)
+	$(CC) $(CFLAGS) $^ -o $@
+
+# 生成对象文件
+$(BIN_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# 清理规则
+clean:
+	rm -f $(BIN_DIR)/*.o $(TARGET) $(SRC_DIR)/*.ll $(SRC_DIR)/*.mut $(SRC_DIR)/*.stat
